@@ -6,20 +6,57 @@
 
 ## Table of Contents
 
-1. [Prerequisites](#1-prerequisites)
-2. [Architecture Overview](#2-architecture-overview)
-3. [Option A — Docker Compose (Recommended for Production)](#3-option-a--docker-compose-recommended-for-production)
-4. [Option B — Local / Bare-Metal](#4-option-b--local--bare-metal)
-5. [Environment Variables Reference](#5-environment-variables-reference)
-6. [Database & Migrations](#6-database--migrations)
-7. [Notification Channel Setup](#7-notification-channel-setup)
-8. [IBKR Real-Time Pricing (Optional)](#8-ibkr-real-time-pricing-optional)
-9. [CLI Reference](#9-cli-reference)
-10. [Health Monitoring](#10-health-monitoring)
-11. [Logging](#11-logging)
-12. [Backup & Data Retention](#12-backup--data-retention)
-13. [Updating / Upgrading](#13-updating--upgrading)
-14. [Troubleshooting](#14-troubleshooting)
+- [ValueSentinel — Deployment Guide](#valuesentinel--deployment-guide)
+  - [Table of Contents](#table-of-contents)
+  - [1. Prerequisites](#1-prerequisites)
+  - [2. Architecture Overview](#2-architecture-overview)
+  - [3. Quick Deploy (Recommended)](#3-quick-deploy-recommended)
+  - [4. Option A — Docker Compose (Manual)](#4-option-a--docker-compose-manual)
+    - [4.1 Clone \& Configure](#41-clone--configure)
+    - [4.2 Build \& Start](#42-build--start)
+    - [4.3 Verify](#43-verify)
+    - [4.4 Stop / Restart](#44-stop--restart)
+    - [4.5 Persistent Data](#45-persistent-data)
+  - [5. Option B — Local / Bare-Metal](#5-option-b--local--bare-metal)
+    - [5.1 Create Virtual Environment](#51-create-virtual-environment)
+    - [5.2 Install](#52-install)
+    - [5.3 Configure](#53-configure)
+    - [5.4 Initialize Database](#54-initialize-database)
+    - [5.5 Add Tickers \& Run](#55-add-tickers--run)
+    - [5.6 Start the Dashboard](#56-start-the-dashboard)
+    - [5.7 Makefile Shortcuts](#57-makefile-shortcuts)
+  - [6. Environment Variables Reference](#6-environment-variables-reference)
+    - [Core](#core)
+    - [Telegram](#telegram)
+    - [Discord](#discord)
+    - [Email (SMTP)](#email-smtp)
+    - [Pushover](#pushover)
+    - [Interactive Brokers (Optional)](#interactive-brokers-optional)
+  - [7. Database \& Migrations](#7-database--migrations)
+    - [Manual migration commands](#manual-migration-commands)
+    - [Current migrations](#current-migrations)
+    - [PostgreSQL vs SQLite](#postgresql-vs-sqlite)
+  - [8. Notification Channel Setup](#8-notification-channel-setup)
+    - [Telegram](#telegram-1)
+    - [Discord](#discord-1)
+    - [Email (SMTP)](#email-smtp-1)
+    - [Pushover](#pushover-1)
+    - [Retry \& Rate Limiting](#retry--rate-limiting)
+  - [9. IBKR Real-Time Pricing (Optional)](#9-ibkr-real-time-pricing-optional)
+  - [10. CLI Reference](#10-cli-reference)
+  - [11. Health Monitoring](#11-health-monitoring)
+    - [Dashboard Health](#dashboard-health)
+    - [HTTP Health Endpoint](#http-health-endpoint)
+    - [Docker Health](#docker-health)
+  - [12. Logging](#12-logging)
+  - [13. Backup \& Data Retention](#13-backup--data-retention)
+    - [PostgreSQL Backups](#postgresql-backups)
+    - [SQLite Backups](#sqlite-backups)
+    - [Data Retention](#data-retention)
+  - [14. Updating / Upgrading](#14-updating--upgrading)
+    - [Docker](#docker)
+    - [Local](#local)
+  - [15. Troubleshooting](#15-troubleshooting)
 
 ---
 
@@ -62,9 +99,41 @@ Data flows:
 
 ---
 
-## 3. Option A — Docker Compose (Recommended for Production)
+## 3. Quick Deploy (Recommended)
 
-### 3.1 Clone & Configure
+Cross-platform deployment scripts automate prerequisite checks, environment setup, Docker builds, and migrations.
+
+**macOS / Linux:**
+```bash
+git clone <repository-url> ValueSentinel
+cd ValueSentinel
+./deploy.sh                # Docker mode (default)
+./deploy.sh --local        # Local Python venv mode
+./deploy.sh --skip-env     # Skip interactive .env editor prompt
+```
+
+**Windows (PowerShell):**
+```powershell
+git clone <repository-url> ValueSentinel
+cd ValueSentinel
+.\deploy.ps1                # Docker mode (default)
+.\deploy.ps1 -Mode local    # Local Python venv mode
+.\deploy.ps1 -SkipEnv       # Skip interactive .env editor prompt
+```
+
+The scripts will:
+1. Verify prerequisites (Docker or Python 3.10+)
+2. Create `.env` from `.env.example` if it doesn't exist (and optionally open it for editing)
+3. Create `logs/` and `data/` directories
+4. **Docker mode:** Build images and start all three services
+5. **Local mode:** Create venv, install dependencies, run Alembic migrations
+6. Verify the deployment with a health check
+
+---
+
+## 4. Option A — Docker Compose (Manual)
+
+### 4.1 Clone & Configure
 
 ```bash
 git clone <repository-url> ValueSentinel
@@ -74,7 +143,7 @@ cp .env.example .env
 
 Edit `.env` with your notification credentials and any overrides. The `DATABASE_URL` is set automatically inside `docker-compose.yml` for the PostgreSQL container — you do **not** need to set it in `.env` for Docker deployments.
 
-### 3.2 Build & Start
+### 4.2 Build & Start
 
 ```bash
 docker compose build
@@ -83,7 +152,7 @@ docker compose up -d
 
 This starts all three services. On first boot, Alembic runs all migrations automatically.
 
-### 3.3 Verify
+### 4.3 Verify
 
 ```bash
 # Check all containers are running
@@ -101,7 +170,7 @@ You should see:
 - `scheduler` — "Scheduler started: check every 15 min"
 - `db` — "database system is ready to accept connections"
 
-### 3.4 Stop / Restart
+### 4.4 Stop / Restart
 
 ```bash
 docker compose down          # Stop all services
@@ -109,7 +178,7 @@ docker compose up -d         # Start again
 docker compose restart app   # Restart just the dashboard
 ```
 
-### 3.5 Persistent Data
+### 4.5 Persistent Data
 
 The PostgreSQL data volume (`pgdata`) persists across restarts. Logs are mounted at `./logs/` on the host.
 
@@ -121,9 +190,9 @@ docker compose down -v   # -v removes named volumes
 
 ---
 
-## 4. Option B — Local / Bare-Metal
+## 5. Option B — Local / Bare-Metal
 
-### 4.1 Create Virtual Environment
+### 5.1 Create Virtual Environment
 
 ```bash
 cd ValueSentinel
@@ -131,7 +200,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 4.2 Install
+### 5.2 Install
 
 ```bash
 # Development (with test tools)
@@ -144,7 +213,7 @@ pip install -e ".[postgres]"
 pip install -e ".[all]"
 ```
 
-### 4.3 Configure
+### 5.3 Configure
 
 ```bash
 cp .env.example .env
@@ -153,7 +222,7 @@ cp .env.example .env
 
 For local development, `DATABASE_URL` defaults to `sqlite:///data/valuesentinel.db`, which requires no external database.
 
-### 4.4 Initialize Database
+### 5.4 Initialize Database
 
 ```bash
 # Create tables via Alembic
@@ -163,7 +232,7 @@ alembic upgrade head
 python -m valuesentinel init-db
 ```
 
-### 4.5 Add Tickers & Run
+### 5.5 Add Tickers & Run
 
 ```bash
 # Add a ticker
@@ -177,7 +246,7 @@ python -m valuesentinel check
 python -m valuesentinel run
 ```
 
-### 4.6 Start the Dashboard
+### 5.6 Start the Dashboard
 
 In a separate terminal:
 
@@ -188,7 +257,7 @@ streamlit run src/valuesentinel/dashboard/app.py
 
 Dashboard opens at **http://localhost:8501**.
 
-### 4.7 Makefile Shortcuts
+### 5.7 Makefile Shortcuts
 
 ```bash
 make setup       # Install deps, init DB, copy .env
@@ -202,7 +271,7 @@ make migrate     # Run Alembic migrations
 
 ---
 
-## 5. Environment Variables Reference
+## 6. Environment Variables Reference
 
 All configuration is via environment variables (or a `.env` file loaded automatically).
 
@@ -256,7 +325,7 @@ All configuration is via environment variables (or a `.env` file loaded automati
 
 ---
 
-## 6. Database & Migrations
+## 7. Database & Migrations
 
 ValueSentinel uses **Alembic** for schema migrations. Migrations run automatically on Docker startup (the `app` container runs `alembic upgrade head` before launching Streamlit).
 
@@ -291,7 +360,7 @@ alembic downgrade -1
 
 ---
 
-## 7. Notification Channel Setup
+## 8. Notification Channel Setup
 
 At least one notification channel should be configured for alerts to be delivered. Unconfigured channels are silently skipped. Alerts with **Informational** priority never generate push notifications (dashboard-only).
 
@@ -335,7 +404,7 @@ All dispatchers retry up to **3 times** with exponential backoff on failure. Tel
 
 ---
 
-## 8. IBKR Real-Time Pricing (Optional)
+## 9. IBKR Real-Time Pricing (Optional)
 
 By default, ValueSentinel uses **yfinance** for 15-minute delayed quotes. For real-time pricing:
 
@@ -347,7 +416,7 @@ The system auto-detects IBKR availability on startup. If the connection fails, i
 
 ---
 
-## 9. CLI Reference
+## 10. CLI Reference
 
 ```
 valuesentinel <command> [args]
@@ -375,7 +444,7 @@ python -m valuesentinel run                   # Start scheduler
 
 ---
 
-## 10. Health Monitoring
+## 11. Health Monitoring
 
 ### Dashboard Health
 
@@ -394,7 +463,7 @@ docker compose logs -f    # Live logs
 
 ---
 
-## 11. Logging
+## 12. Logging
 
 Logs are written to both **stdout** (for Docker log collection) and a rotating file.
 
@@ -407,7 +476,7 @@ Log format: `YYYY-MM-DD HH:MM:SS,ms [LEVEL] module: message`
 
 ---
 
-## 12. Backup & Data Retention
+## 13. Backup & Data Retention
 
 ### PostgreSQL Backups
 
@@ -433,7 +502,7 @@ DELETE FROM alert_history WHERE triggered_at < NOW() - INTERVAL '90 days';
 
 ---
 
-## 13. Updating / Upgrading
+## 14. Updating / Upgrading
 
 ### Docker
 
@@ -457,7 +526,7 @@ alembic upgrade head
 
 ---
 
-## 14. Troubleshooting
+## 15. Troubleshooting
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|

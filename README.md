@@ -23,38 +23,44 @@ ValueSentinel monitors fundamental valuation ratios — P/E, EV/EBITDA, P/B, P/F
 - Python 3.10+
 - (Optional) Docker & Docker Compose for containerized deployment
 
-### Local Development
+### One-Command Deploy
 
+Cross-platform deployment scripts handle prerequisites, environment setup, builds, and migrations automatically.
+
+**macOS / Linux:**
 ```bash
-# Clone the repo
 git clone https://github.com/<your-username>/ValueSentinel.git
 cd ValueSentinel
+./deploy.sh              # Docker (default)
+./deploy.sh --local      # Local Python venv
+```
 
-# Create virtual environment
+**Windows (PowerShell):**
+```powershell
+git clone https://github.com/<your-username>/ValueSentinel.git
+cd ValueSentinel
+.\deploy.ps1              # Docker (default)
+.\deploy.ps1 -Mode local  # Local Python venv
+```
+
+### Manual: Local Development
+
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
-
-# Install with dev dependencies
 pip install -e ".[dev]"
-
-# Copy and configure environment
 cp .env.example .env
 # Edit .env with your API keys / notification credentials
-
-# Initialize the database
 valuesentinel init-db
-
-# Run the dashboard
 streamlit run src/valuesentinel/dashboard/app.py
 ```
 
-### Docker (Recommended for Production)
+### Manual: Docker (Recommended for Production)
 
 ```bash
 cp .env.example .env
-# Edit .env — set DATABASE_URL and notification credentials
-
-docker compose up -d
+# Edit .env — set notification credentials
+docker compose build && docker compose up -d
 ```
 
 The dashboard will be available at **http://localhost:8501**.
@@ -108,6 +114,8 @@ ValueSentinel/
 ├── docker-compose.yml
 ├── Dockerfile
 ├── Makefile
+├── deploy.sh              # Deployment script (macOS/Linux)
+├── deploy.ps1             # Deployment script (Windows)
 ├── pyproject.toml
 ├── .env.example
 └── README.md
