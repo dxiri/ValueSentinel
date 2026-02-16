@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "valuesentinel"
+version = "1.1.0"
+description = "Financial valuation metrics alerter for value investors"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    "yfinance>=0.2.30",
+    "sqlalchemy>=2.0",
+    "alembic>=1.12",
+    "apscheduler>=3.10",
+    "httpx>=0.25",
+    "python-dotenv>=1.0",
+    "streamlit>=1.30",
+    "pandas>=2.0",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+ibkr = ["ib_async>=1.0"]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-asyncio>=0.21",
+    "ruff>=0.1",
+    "mypy>=1.7",
+    "types-requests",
+    "pandas-stubs",
+]
+postgres = ["psycopg2-binary>=2.9"]
+all = ["valuesentinel[ibkr,dev,postgres]"]
+
+[project.scripts]
+valuesentinel = "valuesentinel.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=valuesentinel --cov-report=term-missing"
