@@ -17,9 +17,9 @@ env/
 # Environment
 .env
 
-# Data & logs
-data/
-logs/
+# Data & logs (top-level only, not src/valuesentinel/data/)
+/data/
+/logs/
 *.db
 
 # Distribution
