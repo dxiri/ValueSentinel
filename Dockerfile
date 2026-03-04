@@ -4,7 +4,7 @@ WORKDIR /app
 
 # System deps (build-only)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev && \
+    gcc libpq-dev gosu && \
     rm -rf /var/lib/apt/lists/*
 
 # Copy project files
@@ -23,9 +23,13 @@ RUN pip install --no-cache-dir ".[postgres]"
 RUN groupadd --gid 1000 appuser && \
     useradd --uid 1000 --gid 1000 --no-create-home appuser && \
     chown -R appuser:appuser /app
-USER appuser
+
+# Entrypoint: fix ownership of mounted volumes, then drop to appuser
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 8501
 
+ENTRYPOINT ["/entrypoint.sh"]
 # Default: run the Streamlit dashboard
 CMD ["sh", "-c", "alembic upgrade head && streamlit run src/valuesentinel/dashboard/app.py --server.port=8501 --server.address=0.0.0.0"]
