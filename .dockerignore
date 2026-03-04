@@ -1,0 +1,49 @@
+# Git
+.git/
+.gitignore
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment (secrets)
+.env
+
+# Runtime data
+/data/
+/logs/
+*.db
+
+# Distribution / build artifacts
+*.egg-info/
+dist/
+build/
+__pycache__/
+*.py[cod]
+
+# Test / QA
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs (not needed in image)
+docs/
+*.md
+!README.md
+
+# Deploy scripts (not needed in image)
+deploy.sh
+deploy.ps1
+Makefile

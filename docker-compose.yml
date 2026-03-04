@@ -2,11 +2,11 @@ services:
   app:
     build: .
     ports:
-      - "8501:8501"
+      - "127.0.0.1:8501:8501"
     environment:
-      - DATABASE_URL=postgresql://valuesentinel:valuesentinel@db:5432/valuesentinel
-      - CHECK_INTERVAL_MINUTES=15
-      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-valuesentinel}:${POSTGRES_PASSWORD:-valuesentinel}@db:5432/${POSTGRES_DB:-valuesentinel}
+      - CHECK_INTERVAL_MINUTES=${CHECK_INTERVAL_MINUTES:-15}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     env_file:
       - .env
     depends_on:
@@ -20,9 +20,9 @@ services:
     build: .
     command: ["python", "-m", "valuesentinel.cli", "run"]
     environment:
-      - DATABASE_URL=postgresql://valuesentinel:valuesentinel@db:5432/valuesentinel
-      - CHECK_INTERVAL_MINUTES=15
-      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-valuesentinel}:${POSTGRES_PASSWORD:-valuesentinel}@db:5432/${POSTGRES_DB:-valuesentinel}
+      - CHECK_INTERVAL_MINUTES=${CHECK_INTERVAL_MINUTES:-15}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
     env_file:
       - .env
     depends_on:
@@ -35,15 +35,16 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      - POSTGRES_USER=valuesentinel
-      - POSTGRES_PASSWORD=valuesentinel
-      - POSTGRES_DB=valuesentinel
+      - POSTGRES_USER=${POSTGRES_USER:-valuesentinel}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-valuesentinel}
+      - POSTGRES_DB=${POSTGRES_DB:-valuesentinel}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # DB only accessible from internal Docker network — not exposed to host
+    expose:
+      - "5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U valuesentinel"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-valuesentinel}"]
       interval: 5s
       timeout: 5s
       retries: 5

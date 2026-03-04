@@ -55,11 +55,9 @@ def setup_logging() -> None:
     )
     file_handler.setFormatter(JSONFormatter())
 
-    # Console handler (human-readable)
+    # Console handler (human-readable, with redaction)
     console_handler = logging.StreamHandler()
-    console_handler.setFormatter(
-        logging.Formatter("%(asctime)s [%(levelname)-5s] %(name)s: %(message)s")
-    )
+    console_handler.setFormatter(JSONFormatter())
 
     root_logger.handlers.clear()
     root_logger.addHandler(file_handler)

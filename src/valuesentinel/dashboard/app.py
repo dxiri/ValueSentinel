@@ -569,11 +569,12 @@ elif page == "Settings":
 
     st.subheader("Current Configuration")
     st.json({
-        "database_url": cfg.db.url[:30] + "..." if len(cfg.db.url) > 30 else cfg.db.url,
+        "database": "connected" if cfg.db.url else "not configured",
         "check_interval_minutes": cfg.scheduler.check_interval_minutes,
         "telegram_configured": cfg.telegram.enabled,
         "discord_configured": cfg.discord.enabled,
         "email_configured": cfg.email.enabled,
+        "pushover_configured": cfg.pushover.enabled if hasattr(cfg, 'pushover') else False,
         "log_level": cfg.logging.level,
     })
 

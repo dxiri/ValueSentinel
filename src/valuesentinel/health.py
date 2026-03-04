@@ -52,10 +52,11 @@ class HealthHandler(BaseHTTPRequestHandler):
                 "active_alerts": active_alerts,
                 "last_fundamental_refresh": last_refresh,
             }
-        except Exception as e:
+        except Exception:
+            logger.exception("Health check failed")
             return {
                 "status": "unhealthy",
-                "error": str(e),
+                "error": "internal error",
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
@@ -66,7 +67,7 @@ class HealthHandler(BaseHTTPRequestHandler):
 
 def start_health_server(port: int = 8080) -> Thread:
     """Start the health check HTTP server in a background thread."""
-    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server = HTTPServer(("127.0.0.1", port), HealthHandler)
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()
     logger.info("Health check server started on port %d", port)
