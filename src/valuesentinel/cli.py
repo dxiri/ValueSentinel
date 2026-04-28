@@ -36,6 +36,14 @@ def main() -> None:
     add_p = sub.add_parser("add-ticker", help="Add a ticker to the watchlist")
     add_p.add_argument("symbol", help="Ticker symbol (e.g., AAPL, SHEL.L, 7203.T)")
 
+    # Remove a ticker
+    rm_p = sub.add_parser(
+        "remove-ticker",
+        help="Remove a ticker from the watchlist (also deletes its alerts and cached fundamentals)",
+    )
+    rm_p.add_argument("symbol", help="Ticker symbol to remove")
+    rm_p.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
+
     # Refresh fundamentals
     refresh_p = sub.add_parser("refresh", help="Refresh fundamental data")
     refresh_p.add_argument("symbol", nargs="?", help="Specific ticker (or all if omitted)")
@@ -48,6 +56,9 @@ def main() -> None:
 
     elif args.command == "add-ticker":
         _add_ticker(args.symbol)
+
+    elif args.command == "remove-ticker":
+        _remove_ticker(args.symbol, assume_yes=args.yes)
 
     elif args.command == "refresh":
         _refresh(args.symbol)
@@ -99,6 +110,35 @@ def _add_ticker(symbol: str) -> None:
             f"{count} periods cached, "
             f"{ticker.history_years_available or 0:.1f}y history"
         )
+
+
+def _remove_ticker(symbol: str, assume_yes: bool = False) -> None:
+    from valuesentinel.database import get_db
+    from valuesentinel.models import Ticker
+
+    init_db()
+    with get_db() as session:
+        ticker = session.query(Ticker).filter(Ticker.symbol == symbol).first()
+        if not ticker:
+            print(f"Ticker {symbol} not found.")
+            return
+
+        alert_count = len(ticker.alerts)
+        fundamentals_count = len(ticker.fundamentals)
+
+        if not assume_yes:
+            print(
+                f"This will permanently remove {ticker.symbol} ({ticker.name or '?'}), "
+                f"{alert_count} alert(s), and {fundamentals_count} cached fundamental period(s)."
+            )
+            answer = input("Continue? [y/N]: ").strip().lower()
+            if answer not in ("y", "yes"):
+                print("Aborted.")
+                return
+
+        session.delete(ticker)
+        session.commit()
+        print(f"Removed {symbol}")
 
 
 def _refresh(symbol: str | None) -> None:

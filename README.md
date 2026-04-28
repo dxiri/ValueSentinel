@@ -76,6 +76,7 @@ Three services start automatically:
 valuesentinel init-db          # Initialize database tables
 valuesentinel add-ticker AAPL  # Add a ticker to watchlist
 valuesentinel add-ticker SHEL.L  # Non-US ticker (London)
+valuesentinel remove-ticker AAPL  # Remove a ticker (cascades to its alerts & cached fundamentals)
 valuesentinel refresh AAPL     # Refresh fundamentals for a ticker
 valuesentinel check            # Run one alert-check cycle
 valuesentinel run              # Start the scheduler loop

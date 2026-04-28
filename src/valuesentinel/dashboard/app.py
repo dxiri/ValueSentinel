@@ -557,6 +557,50 @@ elif page == "Manage Tickers":
                     st.success(f"Refreshed {len(tickers)} tickers")
                     st.rerun()
 
+            # Delete ticker
+            st.markdown("---")
+            st.subheader("Remove Ticker")
+            symbol_options = [t.symbol for t in tickers]
+            del_col1, del_col2 = st.columns([3, 1])
+            delete_symbol = del_col1.selectbox(
+                "Ticker to remove",
+                symbol_options,
+                key="delete_ticker_symbol",
+            )
+
+            alert_count = 0
+            if delete_symbol:
+                with get_db() as count_session:
+                    target = count_session.query(Ticker).filter(Ticker.symbol == delete_symbol).first()
+                    if target:
+                        alert_count = len(target.alerts)
+
+            if alert_count:
+                st.warning(
+                    f"Removing **{delete_symbol}** will also delete {alert_count} "
+                    f"alert(s) and all cached fundamental data for this ticker."
+                )
+            else:
+                st.caption(
+                    f"Removing **{delete_symbol}** will delete all cached fundamental data for this ticker."
+                )
+
+            confirm_delete = st.checkbox(
+                f"Yes, permanently remove {delete_symbol}",
+                key="confirm_delete_ticker",
+            )
+
+            if del_col2.button("🗑️ Remove", type="secondary", disabled=not confirm_delete):
+                with get_db() as session:
+                    target = session.query(Ticker).filter(Ticker.symbol == delete_symbol).first()
+                    if target:
+                        session.delete(target)
+                        session.commit()
+                        st.success(f"Removed {delete_symbol}")
+                        st.rerun()
+                    else:
+                        st.error(f"Ticker {delete_symbol} not found")
+
 
 # ══════════════════════════════════════════════════════
 # PAGE: Settings
